@@ -32,17 +32,28 @@ def not_stopword(tt):
 
 def lower(tt):
     """Given a POS tagged token (<token>, <pos>), return
-    (<token>.lower(), <pos>)
+    (<token>.lower(), <pos>).
     """
     return (tt[0].lower(), tt[1])
 
 
-def tokenize(doc):
+def stem(tt):
+    """Given a POS tagged token (<token>, <pos>), return
+    (<stemmed token>, <pos>).
+    """
+    return (nltk.stem.lancaster.LancasterStemmer().stem(tt[0]), tt[1])
+
+
+def tokenize(doc, with_stem=False):
     """Given a document string, return a list of tokens.
     """
-    return list(tz.thread_last(
-        nltk.tag.pos_tag(nltk.tokenize.word_tokenize(doc)),
+    pipeline = [
         (filter, not_alpha),
         (filter, not_proper),
         (map, lower),
-        (filter, not_stopword)))
+        (filter, not_stopword)]
+    if with_stem:
+        pipeline = pipeline + [(map, stem)]
+    return list(tz.thread_last(
+        nltk.tag.pos_tag(nltk.tokenize.word_tokenize(doc)),
+        *pipeline))
