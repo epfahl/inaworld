@@ -1,3 +1,6 @@
+"""Load the corpus of data.
+"""
+
 import re
 import pandas as pd
 import toolz as tz
