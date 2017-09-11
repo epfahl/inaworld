@@ -1,4 +1,6 @@
 """Tokenize a document.
+
+May be deprecated in favor of a full sklearn solution.
 """
 
 import re
@@ -9,7 +11,7 @@ re_not_alpha = re.compile('[^a-zA-Z]')
 STOPWORDS = set(nltk.corpus.stopwords.words('english'))
 
 
-def not_alpha(tt):
+def is_alpha(tt):
     """Given a POS tagged token (<token>, <pos>), return True if the token has
     only alphabetic characters (i.e., no punctuation or numbers).
     """
@@ -44,16 +46,23 @@ def stem(tt):
     return (nltk.stem.lancaster.LancasterStemmer().stem(tt[0]), tt[1])
 
 
+def remove_pos(tt):
+    """Given a POS tagged token (<token>, <pos>), return only the token.
+    """
+    return tt[0]
+
+
 def tokenize(doc, with_stem=False):
     """Given a document string, return a list of tokens.
     """
     pipeline = [
-        (filter, not_alpha),
+        (filter, is_alpha),
         (filter, not_proper),
         (map, lower),
         (filter, not_stopword)]
     if with_stem:
-        pipeline = pipeline + [(map, stem)]
+        pipeline += [(map, stem)]
+    pipeline += [(map, remove_pos)]
     return list(tz.thread_last(
         nltk.tag.pos_tag(nltk.tokenize.word_tokenize(doc)),
         *pipeline))
