@@ -5,6 +5,10 @@ import re
 import pandas as pd
 import toolz as tz
 
+from . import utils
+
+DEFAULT_DATA_PATH = 'movie_data.csv'
+
 
 def strlst_to_lststr(genres):
     """Convert a string of list entries to a list of lowercase strings.
@@ -33,14 +37,30 @@ def to_datetime(date):
     return ret
 
 
-def load(path):
+def load(path=None):
     """Load the CSV data, transform into an appropriate form for exploitation,
     and return a list of dicts
+
+    Notes
+    -----
+    * Only the genres and summaries are retained.  It is straightforward to
+      retain additional columns and include other transformations.
     """
+
+    drop_cols = [
+        'id', 'title', 'release_date',
+        'runtime', 'box_office_revenue']
+
+    if path is None:
+        path = utils.local_filepath(DEFAULT_DATA_PATH)
 
     def tx(d):
         return tz.merge(d, {
-            'genres': strlst_to_lststr(d['genres']),
-            'release_date': to_datetime(d['release_date'])})
+            'genres': strlst_to_lststr(d['genres'])})
 
-    return list(map(tx, pd.read_csv(path).to_dict('records')))
+    return list(map(
+        tx,
+        (
+            pd.read_csv(path)
+            .drop(drop_cols, axis=1)
+            .to_dict('records'))))
