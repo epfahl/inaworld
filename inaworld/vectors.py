@@ -35,9 +35,10 @@ def genres(gnr):
     boolean indicator sparse matrix).
     """
     vectorizer = CountVectorizer(binary=True, tokenizer=genres_tokenizer)
+    vectors = vectorizer.fit_transform(gnr)
     return (
         np.array(vectorizer.get_feature_names()),
-        vectorizer.fit_transform(gnr))
+        vectors)
 
 
 def summaries(smr, max_df=MAX_DF):
@@ -48,6 +49,7 @@ def summaries(smr, max_df=MAX_DF):
         max_df=max_df,
         token_pattern=SUMMARY_TOKEN_PATTERN,
         stop_words='english')
+    vectors = vectorizer.fit_transform(smr)
     return (
         np.array(vectorizer.get_feature_names()),
-        vectorizer.fit_transform(smr))
+        vectors)
