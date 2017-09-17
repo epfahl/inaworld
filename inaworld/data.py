@@ -1,66 +1,35 @@
-"""Load the corpus of data.
+"""Load movie summaries and genres from file.
 """
 
-import re
 import pandas as pd
-import toolz as tz
 
 from . import utils
 
 DEFAULT_DATA_PATH = 'movie_data.csv'
 
 
-def strlst_to_lststr(genres):
-    """Convert a string of list entries to a list of lowercase strings.
-
-    Examples
-    --------
-    >>> strlst_to_lststr('["Banking Hijinks", "Actuarial adventure"]')
-    ['banking hijinks', "actuarial adventure"]
+def filter_genres_summaries(data):
+    """Given a DataFrame of movie genres and summaries, filter rows according
+    to the minimum lengths of the genre and summary strings.
     """
-    return list(map(
-        lambda g: g.strip().lower()[1:-1],
-        re.sub('[\[\]]', '', genres).split(',')))
+    return data[
+        (data['genres'].str.len() > 2) &
+        (data['summary'].str.len() > 0)]
 
 
-def to_datetime(date):
-    """Given a string date, return a Python datetime.date.  If only the year is
-    given, the date is (<year>, 1, 1).  If the result is a null type or if an
-    exception is raised, None is returned.
+def load_summaries_genres(path=None):
+    """Load movie summaries and genres as separate arrays.  The rows are
+    filtered to remove entries with empty genre lists and , but the genres and
+    summaries are unprocessed.
     """
-    try:
-        ret = pd.to_datetime(date).to_pydatetime().date()
-    except:
-        ret = None
-    if pd.isnull(ret):
-        ret = None
-    return ret
-
-
-def load(path=None):
-    """Load the CSV data, transform into an appropriate form for exploitation,
-    and return a list of dicts
-
-    Notes
-    -----
-    * Only the genres and summaries are retained.  It is straightforward to
-      retain additional columns and include other transformations.
-    """
-
-    drop_cols = [
-        'id', 'title', 'release_date',
-        'runtime', 'box_office_revenue']
 
     if path is None:
         path = utils.local_filepath(DEFAULT_DATA_PATH)
 
-    def tx(d):
-        return tz.merge(d, {
-            'genres': strlst_to_lststr(d['genres'])})
-
-    return list(map(
-        tx,
-        (
-            pd.read_csv(path)
-            .drop(drop_cols, axis=1)
-            .to_dict('records'))))
+    drop_cols = [
+        'id', 'title', 'release_date',
+        'runtime', 'box_office_revenue']
+    df = filter_genres_summaries(
+        pd.read_csv(path)
+        .drop(drop_cols, axis=1))
+    return (df['summary'].values, df['genres'].values)
