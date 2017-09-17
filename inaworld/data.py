@@ -3,10 +3,6 @@
 
 import pandas as pd
 
-from . import utils
-
-DEFAULT_DATA_PATH = 'movie_data.csv'
-
 
 def filter_genres_summaries(data):
     """Given a DataFrame of movie genres and summaries, filter rows according
@@ -17,14 +13,11 @@ def filter_genres_summaries(data):
         (data['summary'].str.len() > 0)]
 
 
-def load_summaries_genres(path=None):
+def load_summaries_genres(path):
     """Load movie summaries and genres as separate arrays.  The rows are
     filtered to remove entries with empty genre lists and , but the genres and
     summaries are unprocessed.
     """
-
-    if path is None:
-        path = utils.local_filepath(DEFAULT_DATA_PATH)
 
     drop_cols = [
         'id', 'title', 'release_date',
