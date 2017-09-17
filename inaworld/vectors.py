@@ -30,18 +30,18 @@ def genres_tokenizer(genres):
     return re.sub('[\[\]\"]', '', genres).split(', ')
 
 
-def genres(gnr):
+def genres(gnrs):
     """Given an array of unprocessed genre strings, return (genre tokens array,
     boolean indicator sparse matrix).
     """
     vectorizer = CountVectorizer(binary=True, tokenizer=genres_tokenizer)
-    vectors = vectorizer.fit_transform(gnr)
+    vectors = vectorizer.fit_transform(gnrs)
     return (
         np.array(vectorizer.get_feature_names()),
         vectors)
 
 
-def summaries(smr, max_df=MAX_DF):
+def summaries(smrs, max_df=MAX_DF):
     """Given an array of unprocessed summary strings, return (summary tokens
     array, TF-IDF sparse matrix).
     """
@@ -49,7 +49,7 @@ def summaries(smr, max_df=MAX_DF):
         max_df=max_df,
         token_pattern=SUMMARY_TOKEN_PATTERN,
         stop_words='english')
-    vectors = vectorizer.fit_transform(smr)
+    vectors = vectorizer.fit_transform(smrs)
     return (
         np.array(vectorizer.get_feature_names()),
         vectors)
