@@ -1,6 +1,8 @@
 """Tokenize a document.
 
-May be deprecated in favor of a full sklearn solution.
+*** NLTK tokenization and this module have been deprecated in favor of a
+sklearn-based solution.  However, NLTK may offer more options for tokenization,
+stemming, etc., this module is retained for future reference.
 """
 
 import re
