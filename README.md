@@ -59,11 +59,11 @@ The prediction of multiple genre tags (or labels) from a document is a well-trod
 
 ### Vectorization
 
-A classifier that works with text doesn't actually work with text.  Machine learning algorithms operate on numerical representations of data.  A document or a list of tags is converted to an array of numbers--a transformation known as *vectorization*.  This conversion can be accomplished in a variety of ways.  `Inaworld` vectorizes movie summaries by replacing each valid word, or *token*, with its [TF-IDF](http://docs.python-cerberus.org/)  (term frequency-inverse document frequency) statistic.  In essence, TF-IDF records how often a word occurs in a document, inversely weighted by the log of the fraction of documents that contain the word.  TF-IDF gives less weight to words that are very common across the corpus.  `Inaworld` vectorizes movie summaries with the scikit-learn class `TfidfVectorizer`.
+A classifier that works with text doesn't actually work with text.  Machine learning algorithms operate on numerical representations of data.  A document or a list of tags is converted to an array of numbers, a transformation known as *vectorization*.  This conversion can be accomplished in a variety of ways.  `Inaworld` vectorizes movie summaries by replacing each valid word, or, more generally, *token*, with its [TF-IDF](https://en.wikipedia.org/wiki/Tf%E2%80%93idf)  (term frequency-inverse document frequency) statistic.  In essence, TF-IDF records how often a token occurs in a document, inversely weighted by the log of the fraction of documents that contain the token.  TF-IDF gives less weight to tokens that are very common across the corpus.  `Inaworld` vectorizes movie summaries with the scikit-learn class `TfidfVectorizer`.
 
-Genre tag vectorization is straightforward.  List all the unique tags in the movies data set in alphabetical order.  When a genre is present for a given movie, put a 1 at the position of the corresponding tag; otherwise, put a 0.  For each movie, there is a corresponding binary vector that represents the associated list of tags.  Scikit-learn does the heavy lifting of genre vectorization with the class `CountVectorizer`.  
+Genre tag vectorization is straightforward.  List all the unique tags in the movies data set in alphabetical order.  When a genre is present for a given movie, put a 1 at the position of the corresponding tag; otherwise, put a 0.  For each movie, there is a corresponding binary vector that represents the associated list of tags.  Scikit-learn does the heavy lifting of genre vectorization with the class [`CountVectorizer`](http://scikit-learn.org/stable/modules/generated/sklearn.feature_extraction.text.CountVectorizer.html).  
 
-Genres are comma-separated words or phrases.  There is no ambiguity in parsing and listing the individual genre tags.  But the situation isn't so simple for the movie summaries.  Should we split a summary into individual words?  Pairs or triplets of words?  Should individual words be reduced to some root grammatical form (known as *stemming*)?  What about super common, uninformative words like 'the' or 'you' (so-called *stop words*)?  The answers to these questions depend on a number of factors, and different choices should be evaluated when designing a high-performance classifier.  `Inaworld` applies the following specific constraints on summary tokenization:
+Genres are comma-separated words or phrases.  There is no ambiguity in parsing and listing the individual genre tags.  But tokenization isn't so simple for the movie summaries.  Should we split a summary into individual words?  Pairs or triplets of words?  Should individual words be reduced to some root grammatical form (a step known as *stemming*)?  What about super common, uninformative words like 'the' or 'you' (so-called *stop words*)?  The answers to these questions depend on a number of factors, and different choices should be evaluated when designing a high-performance classifier.  `Inaworld` applies the following specific constraints on summary tokenization:
 * Only unigrams (single words) are considered.
 * Words with punctuation or numbers are excluded.
 * Stop words are excluded.
@@ -71,34 +71,34 @@ Genres are comma-separated words or phrases.  There is no ambiguity in parsing a
 
 ### Data Preparation
 
-In what machine learning problem do we not spend 80% of our time on preparing the data so that it can be consumed by transformation and classification algorithms?  The movie data set used here (`movie_data.csv` in the repo) is actually in a pretty decent state, especially if we're interested only in genres and summaries.  Each row of the table has movie, title, release date, revenue, run time, a list of genres, and a summary.  
+In what machine learning problem do we not spend 80% of our time on preparing the data so that it can be consumed by transformation and classification algorithms?  The movie data set used here (`movie_data.csv` in the repo) is actually in pretty decent shape, especially if we're interested only in genres and summaries.  Each row of the table has movie, title, release date, revenue, run time, a list of genres, and a summary.  
 
 Movie genres are listed as single strings, like
 ```
 '["Romance Film", "Drama", "Horror", "Psychological thriller"]'
 ```
-Parsing this as a list of genres isn't a problem.  A regex substitution and comma split does the job nicely.  However, there are rows with emtpy genre lists (411 rows, to be exact), recorded as `[]`.  These rows should be excised from the data set before further processing, since they offer no value for the task at hand.
+Parsing this as a list of genres isn't a problem.  A regular-expression substitution and comma split does the job nicely.  However, there are rows with empty genre lists (411 rows, to be exact), recorded as `'[]'`.  These rows should be excised from the data set before further processing, since they offer no value for the task at hand.
 
-Summaries are provided as simple string, like
+Each summary is a simple string, like
 ```
 'The film portrays an aggressive and belligerent police officer named Nariman who investigates a murder case for which an innocent man is falsely accused.'
 ```
-Once the summary token regex pattern is specified, along with a couple of other parameters, `TfidfVectorizer` handles the tokenization and vectorization of the summaries; no additional pre-processing is necessary.  Fortunately, there are no empty summary strings in the data set, but `inaworld` has code to remove rows with zero-length summaries, just in case.
+Once the summary token pattern is specified (as a regular expression), along with a couple of other parameters, the `scikit-learn` class [`TfidfVectorizer`](http://scikit-learn.org/stable/modules/generated/sklearn.feature_extraction.text.TfidfVectorizer.html) handles the tokenization and vectorization of the summaries; no additional pre-processing is needed.  Fortunately, there are no empty summary strings in the data set, but `inaworld` has a step to remove rows with zero-length summaries, just in case.
 
 In addition to removing rows with no genres, we might also want to remove rows where the only genres present are relatively rare.  Rare genres are unlikely to be returned in the classification, and training may be a challenge, since the training set may have genres not present in the validation set, or vice versa.  To perform this filtering, we need to count the number of times each genre appears across the corpus.  Genre counting is easiest with the vectorized form of the genre data--a matrix where each row is a binary indicator vector.  The filtering process is as follows
 
-1. Sum along each column of the matrix to obtain the count per genre.
-2. Find the matrix columns for which the count is larger than a given threshold.
+1. Sum down each column of the matrix to obtain the count per genre.
+2. Find the columns for which the count is larger than a given threshold.
 3. Create a new matrix where only the above columns are retained.
 4. Find the rows in the new matrix for which there is at least one genre.
 
-The final filter is just what we're after, and it is applied to the vectorized genres and the array of summaries.      
+The final filter is just what we're after, and it is applied to the vectorized genres and the array of summaries to make a totally consistent data set.      
 
 ### Classification
 
-Multi-label classification is a vast subject.  Let's make it smaller by making some specific choices.  A common technique is to train an ensemble of binary classifiers, where each classifier operates on one label, and then apply a [One-vs-Rest](https://en.wikipedia.org/wiki/Multiclass_classification) strategy to make decisions about each label.  In other words, for a particular label, a binary classifier decides if the input data has the label ('One') or not ('Rest').
+Multi-label classification is a vast subject.  Let's shrink it by making some specific choices.  A common technique is to train an ensemble of binary classifiers, where each classifier operates on one label, and then apply a [One-vs-Rest](https://en.wikipedia.org/wiki/Multiclass_classification) strategy to make decisions about each label.  In other words, for a particular label, a binary classifier decides if the input data has the label ('One') or not ('Rest').
 
-Which binary classifier should we choose?  In his [blog](http://www.davidsbatista.net/blog/2017/04/01/document_classification/), David Batista studied the same problem addressed here and found that a linear Support Vector Machine yielded the highest average F1 score, just ahead of Naive Bayes.  David also tried vectorization schemes other than TF-IDF, but found that TF-IDF produced the best results.  That's good enough for me!  The relevant scikit-learn classes are
+Which binary classifier should we choose?  In his [blog article](http://www.davidsbatista.net/blog/2017/04/01/document_classification/), David Batista studied the same problem addressed here and found that a linear [Support Vector Machine](https://en.wikipedia.org/wiki/Support_vector_machine) yielded the highest average F1 score, just ahead of [Naive Bayes](https://en.wikipedia.org/wiki/Naive_Bayes_classifier).  David also tried vectorization schemes other than TF-IDF, but found that TF-IDF produced the best results.  That's good enough for me!  The relevant scikit-learn classes are
 * `TfidfVectorizer`
 * `LinearSVC`
 * `OneVsRestClassifier`
@@ -107,13 +107,13 @@ The One-vs-Rest approach makes an important implicit assumption, namely that the
 
 ### Training
 
-Some care must be taken when splitting the full data set into training and validation sets, and in assessing the performance of the classifier.  More specifically, we should address both *class imbalance*, when there is a large dynamic range in the proportions of classes, and *distributional balance*.
+Some care must be taken when splitting the full data set into training and validation sets, and in assessing the performance of the classifier.  More specifically, we should address both *class imbalance* over the full data set, and *distributional balance* across the split.
 
-The genres 'drama' appears in almost half of the movies in the data set.  'Comedy', 'romance film', 'thriller', and 'action' occur much less frequently than 'drama,' but are still quite prevalent (see Figure below).  If we picked genres randomly from this set, we might see correct labels a significant fraction of the time.  While this classifier, trivial as it is, might have appreciable accuracy, it certainly won't generalize well for the genres that appear in only tens or hundreds of movies.  A discussion of *class imbalance*, the insufficiency of accuracy as a performance measure, and tactics for dealing with imbalance can be found in  [this article](https://machinelearningmastery.com/tactics-to-combat-imbalanced-classes-in-your-machine-learning-dataset/).  `Inaworld` does not have any specific handling of class imbalance, but does dispense with accuracy in favor of precision and recall as performance metrics.
+The genre 'drama' appears in almost half of the movies in the data set.  'Comedy', 'romance film', 'thriller', and 'action' occur much less frequently than 'drama,' but are still quite prevalent (see the figure below).  If we picked genres randomly from this set, we might see correct labels a significant fraction of the time.  While this classifier, trivial as it is, might have appreciable accuracy, it certainly won't generalize well for the genres that appear in only tens or hundreds of movies.  A discussion of *class imbalance*, the insufficiency of accuracy as a performance measure, and tactics for dealing with imbalance can be found in  [this article](https://machinelearningmastery.com/tactics-to-combat-imbalanced-classes-in-your-machine-learning-dataset/).  `Inaworld` does not have any specific handling of class imbalance, but does dispense with accuracy in favor of precision and recall as performance metrics.
 
 ![genre_counts](genre_counts.png)
 
-How can we be sure that the validation data set 'looks like' the training set.  That is, what can we do to encourage the validation and training sets have the same distribution of classes.  This is the goal of `stratification`, which is implemented in `inaworld` by passing the genre vectors to the `stratify` argument of the function `train_test_split` in `scikit-learn`.  Without stratification, the classification performance is significantly worse (see below).
+How can we be sure that the validation data set 'looks like' the training set.  That is, what can we do to encourage the validation and training sets have the same distribution of classes?  This is the goal of *stratification*, which is implemented in `inaworld` by passing the genre vectors to the `stratify` argument of the function `train_test_split` in `scikit-learn`.  Without stratification, the classification performance is significantly worse (see below).
 
 ## Performance
 
@@ -123,7 +123,7 @@ While the initial goal of `inaworld` was just to get something to work that didn
 
 There are so many ways that the tokenization, vectorization, and classification steps can be modified; David Batista investigates a few [choices](http://www.davidsbatista.net/blog/2017/04/01/document_classification/).  In fact, every aspect of the system could be changed in a variety of ways.  Here are few additional curiosities that come to mind:
 * What is the impact of stemming (dog, dogs, doggy -> dog) on classification performance?
-* Does removal of proper nouns (e.g., names) lead to improvements?
+* Does removal of proper nouns, like place and person names, lead to improvements?
 * How difficult would it be to implement a nearest-neighbors approach, which would naturally account for dependent genres? (`KNeighborsClassifier` in `scikit-learn` doesn't like sparse matrices for some reason.)
-* How would we generate a list of semantically independent genres?  For instance, 'science fiction western' and 'screwball comedy' have clear semantic relationship with other, more primative, genres.
+* How would we generate a list of semantically independent genres?  For instance, 'science fiction western' and 'screwball comedy' have clear semantic relationships with other, more primative, genres.
 * How can the trained classifier be cached and serialized to reduce load time?
