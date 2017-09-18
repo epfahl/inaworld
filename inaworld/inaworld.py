@@ -26,7 +26,11 @@ BINARY_CLASSIFIER = LinearSVC
 STRATIFY_SPLIT = False
 
 
-class UntrainedClassifier(Exception):
+class UntrainedError(Exception):
+    pass
+
+
+class UnloadedError(Exception):
     pass
 
 
@@ -122,10 +126,25 @@ class MovieGenres(object):
             path=self.path, min_genre_count=self.min_genre_count)
         return self
 
+    def genre_counts(self):
+        """Return a dict of filtered genre tokens and counts.
+        """
+        if getattr(self, 'data', None) is None:
+            raise UnloadedError(
+                "Padowan, you must first load data before you can wield its "
+                "power!")
+        return dict(zip(
+            self.data['genre_tokens'],
+            filters.genre_counts(self.data['genre_vectors'])))
+
     def train(self):
         """Split data into training and validation sets, and train the
         classifier.
         """
+        if getattr(self, 'data', None) is None:
+            raise UnloadedError(
+                "Padowan, you must first load data before you can be trained "
+                "in its use!")
         data_split, clf = split_and_train(
             self.data,
             test_size=self.test_size,
@@ -141,7 +160,7 @@ class MovieGenres(object):
         raised if the classifier hasn't yet been trained.
         """
         if getattr(self, 'clf', None) is None:
-            raise UntrainedClassifier(
+            raise UntrainedError(
                 "Young Jedi, you must train before you can predict!")
         return predict_genres(self.clf, self.data['genre_tokens'], summary)
 
