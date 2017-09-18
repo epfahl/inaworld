@@ -23,7 +23,7 @@ DEFAULT_DATA_PATH = 'movie_data.csv'
 MIN_GENRE_COUNT = 2
 TEST_SIZE = 0.25
 BINARY_CLASSIFIER = LinearSVC
-STRATIFY_SPLIT = False
+STRATIFY_SPLIT = True
 
 
 class UntrainedError(Exception):
@@ -90,7 +90,7 @@ def split_and_train(
     summaries, genre_vectors = data['summaries'], data['genre_vectors']
     data_split = learn.split_data(
         summaries, genre_vectors,
-        test_size=test_size, stratify_split=STRATIFY_SPLIT)
+        test_size=test_size, stratify_split=stratify_split)
     clf = learn.pipeline(binary_classifier(**binary_classifier_parms))
     clf.fit(data_split['x_train'], data_split['y_train'])
     return (data_split, clf)
