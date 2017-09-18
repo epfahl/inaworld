@@ -17,12 +17,17 @@ from . import utils
 from . import vectors
 from . import filters
 from . import learn
+from . import validation
 
 DEFAULT_DATA_PATH = 'movie_data.csv'
 MIN_GENRE_COUNT = 2
 TEST_SIZE = 0.25
 BINARY_CLASSIFIER = LinearSVC
 STRATIFY_SPLIT = False
+
+
+class UntrainedClassifier(Exception):
+    pass
 
 
 def load_and_filter(path=None, min_genre_count=MIN_GENRE_COUNT):
@@ -54,22 +59,23 @@ def load_and_filter(path=None, min_genre_count=MIN_GENRE_COUNT):
         'summaries': sg['summaries'][gf['movies']]}
 
 
-def train(
-    summaries, genre_vectors,
+def split_and_train(
+    data,
     test_size=TEST_SIZE,
     binary_classifier=BINARY_CLASSIFIER,
     stratify_split=STRATIFY_SPLIT,
     **binary_classifier_parms
 ):
-    """Given arrays of movie summaries and genre vectors, split data into
-    training and validation sets, and instantiate and train a classifier.
+    """Given a data payload that contains arrays of movie summaries and genre
+    vectors, split data into training and validation sets, and instantiate and
+    train a classifier.
 
     Returns
     -------
-    {
-        'split_data': <dict of training/test data for inputs and outputs>,
-        'clf': <trained classifier object>
-    }
+    (
+        <dict of training/test data for inputs and outputs>,
+        <trained classifier object with predict method>
+    )
 
     Notes
     -----
@@ -77,9 +83,74 @@ def train(
       default values that are not exposed here.  See the learn module for
       details.
     """
-    data = learn.split_data(
+    summaries, genre_vectors = data['summaries'], data['genre_vectors']
+    data_split = learn.split_data(
         summaries, genre_vectors,
         test_size=test_size, stratify_split=STRATIFY_SPLIT)
     clf = learn.pipeline(binary_classifier(**binary_classifier_parms))
-    clf.fit(data['x_train'], data['y_train'])
-    return {'split_data': data, 'clf': clf}
+    clf.fit(data_split['x_train'], data_split['y_train'])
+    return (data_split, clf)
+
+
+def predict_genres(clf, genre_tokens, summary):
+    """Given a classifier object, an array of genre tokens, and a movie
+    summary, return a list of genres.
+    """
+    return list(genre_tokens[clf.predict([summary])[0].astype(bool)])
+
+
+class MovieGenres(object):
+
+    def __init__(
+        self,
+        path=None,
+        min_genre_count=MIN_GENRE_COUNT,
+        test_size=TEST_SIZE,
+        binary_classifier=BINARY_CLASSIFIER,
+        stratify_split=STRATIFY_SPLIT,
+        **binary_classifier_parms
+    ):
+        self.path = path
+        self.min_genre_count = min_genre_count
+        self.test_size = test_size
+        self.binary_classifier = binary_classifier
+        self.stratify_split = stratify_split
+        self.binary_classifier_parms = binary_classifier_parms
+
+    def load(self):
+        self.data = load_and_filter(
+            path=self.path, min_genre_count=self.min_genre_count)
+        return self
+
+    def train(self):
+        """Split data into training and validation sets, and train the
+        classifier.
+        """
+        data_split, clf = split_and_train(
+            self.data,
+            test_size=self.test_size,
+            binary_classifier=self.binary_classifier,
+            stratify_split=self.stratify_split,
+            **self.binary_classifier_parms)
+        self.data_split = data_split
+        self.clf = clf
+        return self
+
+    def predict(self, summary):
+        """Given a movie summary, return a list of genres.  An exception is
+        raised if the classifier hasn't yet been trained.
+        """
+        if getattr(self, 'clf', None) is None:
+            raise UntrainedClassifier(
+                "Young Jedi, you must train before you can predict!")
+        return predict_genres(self.clf, self.data['genre_tokens'], summary)
+
+    def report(self):
+        """Return a string report on the classifier performance using the test
+        data.
+        """
+        return validation.report(
+            self.clf,
+            self.data_split['x_test'],
+            self.data_split['y_test'],
+            self.data['genre_tokens'])
