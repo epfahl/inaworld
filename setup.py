@@ -8,8 +8,6 @@ setup(
     author='Eric Pfahl',
     packages=find_packages(),
     install_requires=[
-        'toolz',
-        'nltk',
         'pandas',
         'scikit-learn',
         'numpy',
