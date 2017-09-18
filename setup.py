@@ -10,4 +10,7 @@ setup(
     install_requires=[
         'toolz',
         'nltk',
-        'pandas'])
+        'pandas',
+        'scikit-learn',
+        'numpy',
+        'scipy'])
