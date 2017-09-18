@@ -6,6 +6,8 @@ To get some experience with NLP and text classification, subjects on which I've 
 
 It so happens that I came across a data set--scraped from Wikipedia--that lists metadata for roughly 42000 movies, including genres and summaries.  This data, included in the repo, is the default choice for classifier training and validation.  This repo has an accompanying Jupyter notebook that shows the structure of that data, explores genre tag statistics, and demonstrates the usage of this package.
 
+The classification approach used here was heavily inspired by a [blog article](http://www.davidsbatista.net/blog/2017/04/01/document_classification/) by David Batista.  He solves essentially the same problem (genres from summaries), but with a different data set.  David's best-performing model used TF-IDF vectorization, a linear Support Vector Machine as the binary classifier, and a One-vs-Rest multi-label classifier.  I'm not ashamed of borrowing from my betters.  After all, we're all part of the same community, right?  :smiley:
+
 ## Dependencies and Installation
 
 `Inaworld` was built and tested using the following environment and packages
@@ -19,11 +21,11 @@ To install `inaworld`, you can either clone the repo,
 ```
 git clone https://github.com/epfahl/inaworld
 ```
-and use from within the cloned directory, or pip install directly from github,
+and use it from within the cloned directory, or pip install directly from github,
 ```
 pip install git+https://github.com/epfahl/inaworld
 ```
-The latter should handle the dependencies via `setup.py`, but be aware that I have not yet tested this in a virtualenv.
+The latter should handle the dependencies via `setup.py`, but be aware that this has not yet been tested in a virtualenv.
 
 ## Basic Usage
 
@@ -94,37 +96,34 @@ The final filter is just what we're after, and it is applied to the vectorized g
 
 ### Classification
 
-* one-vs-rest plus binary classifier
-* neglects conditional dependence of genres
+Multi-label classification is a vast subject.  Let's make it smaller by making some specific choices.  A common technique is to train an ensemble of binary classifiers, where each classifier operates on one label, and then apply a [One-vs-Rest](https://en.wikipedia.org/wiki/Multiclass_classification) strategy to make decisions about each label.  In other words, for a particular label, a binary classifier decides if the input data has the label ('One') or not ('Rest').
+
+Which binary classifier should we choose?  In his [blog](http://www.davidsbatista.net/blog/2017/04/01/document_classification/), David Batista studied the same problem addressed here and found that a linear Support Vector Machine yielded the highest average F1 score, just ahead of Naive Bayes.  David also tried vectorization schemes other than TF-IDF, but found that TF-IDF produced the best results.  That's good enough for me!  The relevant scikit-learn classes are
+* `TfidfVectorizer`
+* `LinearSVC`
+* `OneVsRestClassifier`
+
+The One-vs-Rest approach makes an important implicit assumption, namely that the genres are statistically independent.  For instance, it is quite plausible that 'science fiction' and 'action' co-occur quite often.  There are approaches that exploit these conditional dependences, but these techniques were not investigated for `inaworld`.
 
 ### Training
 
-* genre class imbalance (figure)
-* stratified split
+Some care must be taken when splitting the full data set into training and validation sets, and in assessing the performance of the classifier.  More specifically, we should address both *class imbalance*, when there is a large dynamic range in the proportions of classes, and *distributional balance*.
+
+The genres 'drama' appears in almost half of the movies in the data set.  'Comedy', 'romance film', 'thriller', and 'action' occur much less frequently than 'drama,' but are still quite prevalent (see Figure below).  If we picked genres randomly from this set, we might see correct labels a significant fraction of the time.  While this classifier, trivial as it is, might have appreciable accuracy, it certainly won't generalize well for the genres that appear in only tens or hundreds of movies.  A discussion of *class imbalance*, the insufficiency of accuracy as a performance measure, and tactics for dealing with imbalance can be found in  [this article](https://machinelearningmastery.com/tactics-to-combat-imbalanced-classes-in-your-machine-learning-dataset/).  `Inaworld` does not have any specific handling of class imbalance, but does dispense with accuracy in favor of precision and recall as performance metrics.
 
 ![genre_counts](genre_counts.png)
 
+How can we be sure that the validation data set 'looks like' the training set.  That is, what can we do to encourage the validation and training sets have the same distribution of classes.  This is the goal of `stratification`, which is implemented in `inaworld` by passing the genre vectors to the `stratify` argument of the function `train_test_split` in `scikit-learn`.  Without stratification, the classification performance is significantly worse (see below).
+
 ## Performance
 
-While the initial goal of `inaworld` was just to get something to work that didn't look too stupid, it turns out that the performance of the classifier isn't terrible.  The approximate weighted average precision, recall, and F1 score, across all genres, are, respectively, 0.89, 0.64, and 0.73.       
-
-
-* perhaps longer summaries are more accurately classified
-* didn't tune hyperparameters, including the binary classifier, and various tokenization and vectorization assumptions
-
-
-
-
-
-
-
+While the initial goal of `inaworld` was just to get something to work that didn't look too stupid, it turns out that the performance of the classifier isn't terrible.  For the default parameter set, the approximate weighted average *precision*, *recall*, and *F1 score*, across all genres, are, respectively, 0.89, 0.64, and 0.73.  When stratification is turned off, the scores are 0.53, 0.28, and 0.34--definitely worse.  Admittedly, these kinds of summary statistics are not terribly satisfying, but they are useful in comparing different choices of classifiers and parameter values.  
 
 ## Final Thoughts
 
-* tokenization (stemming, remove proper nouns, remove non-words [e.g., 'aaaah'])
-* different binary classifiers (kernel SVM, naive bayes, logistic regression)
-* entirely different approach (kNN variant to account for tag correlations)
-* Not only do genres tend to show correlations, but there may also be hidden
-semantic relationships.  For instance, if 'drama' is a returned tag, but the
-actual tag is 'melodrama,' does that count as a miss?
-* cache the trained classifier for production performance (e.g., real-time tagging).
+There are so many ways that the tokenization, vectorization, and classification steps can be modified; David Batista investigates a few [choices](http://www.davidsbatista.net/blog/2017/04/01/document_classification/).  In fact, every aspect of the system could be changed in a variety of ways.  Here are few additional curiosities that come to mind:
+* What is the impact of stemming (dog, dogs, doggy -> dog) on classification performance?
+* Does removal of proper nouns (e.g., names) lead to improvements?
+* How difficult would it be to implement a nearest-neighbors approach, which would naturally account for dependent genres? (`KNeighborsClassifier` in `scikit-learn` doesn't like sparse matrices for some reason.)
+* How would we generate a list of semantically independent genres?  For instance, 'science fiction western' and 'screwball comedy' have clear semantic relationship with other, more primative, genres.
+* How can the trained classifier be cached and serialized to reduce load time?
