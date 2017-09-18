@@ -33,7 +33,7 @@ def pipeline(
     return Pipeline([('tfidf', tfidf), ('clf', clf)])
 
 
-def split_data(x, y, test_size=0.25, stratify_split=False):
+def split_data(x, y, test_size=0.25, stratify_split=True):
     """Given an array of movie summaries and a sparse matrix of genre indicator
     vectors, return a random training/test split of the data.
 
@@ -65,7 +65,7 @@ def split_data(x, y, test_size=0.25, stratify_split=False):
     xx = x.copy()
     yy = y.copy()
     stratify = None
-    if stratify_split is not None:
+    if stratify_split:
         if isinstance(xx, scipy.sparse.csr.csr_matrix):
             xx = xx.toarray()
         if isinstance(yy, scipy.sparse.csr.csr_matrix):
