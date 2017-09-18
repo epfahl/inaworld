@@ -84,10 +84,12 @@ Summaries are provided as simple string, like
 Once the summary token regex pattern is specified, along with a couple of other parameters, `TfidfVectorizer` handles the tokenization and vectorization of the summaries; no additional pre-processing is necessary.  Fortunately, there are no empty summary strings in the data set, but `inaworld` has code to remove rows with zero-length summaries, just in case.
 
 In addition to removing rows with no genres, we might also want to remove rows where the only genres present are relatively rare.  Rare genres are unlikely to be returned in the classification, and training may be a challenge, since the training set may have genres not present in the validation set, or vice versa.  To perform this filtering, we need to count the number of times each genre appears across the corpus.  Genre counting is easiest with the vectorized form of the genre data--a matrix where each row is a binary indicator vector.  The filtering process is as follows
+
 1. Sum along each column of the matrix to obtain the count per genre.
 2. Find the matrix columns for which the count is larger than a given threshold.
 3. Create a new matrix where only the above columns are retained.
 4. Find the rows in the new matrix for which there is at least one genre.
+
 The final filter is just what we're after, and it is applied to the vectorized genres and the array of summaries.      
 
 ### Classification
