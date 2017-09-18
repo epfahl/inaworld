@@ -114,7 +114,10 @@ class MovieGenres(object):
         stratify_split=STRATIFY_SPLIT,
         **binary_classifier_parms
     ):
-        self.path = path
+        if path is None:
+            self.path = utils.local_filepath(DEFAULT_DATA_PATH)
+        else:
+            self.path = None
         self.min_genre_count = min_genre_count
         self.test_size = test_size
         self.binary_classifier = binary_classifier
