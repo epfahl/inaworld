@@ -2,7 +2,7 @@
 
 ... where we can automatically produce genres from movie summaries.
 
-To get some experience with NLP and text classification, subjects on which I've had minimal exposure, I decided to take a crack at predicting genre tags from a text summary of a film.  The focus here is on creating a working end-to-end system, not a highly polished API or a finely-tuned classifier.  That being said, the API is relatively easy to use and the default classifier performs fairly well.
+To get some experience with NLP and text classification, I decided to take a crack at predicting genre tags from a text summary of a film.  The focus here is on creating a working end-to-end system, not a highly polished API or a finely-tuned classifier.  That being said, the API is relatively easy to use and the default classifier performs fairly well.
 
 It so happens that I came across a data set--scraped from Wikipedia--that lists metadata for roughly 42000 movies, including genres and summaries.  This data, included in the repo, is the default choice for classifier training and validation.  This repo has an accompanying Jupyter notebook that shows the structure of that data, explores genre tag statistics, and demonstrates the usage of this package.
 
